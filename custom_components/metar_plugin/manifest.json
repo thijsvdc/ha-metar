@@ -3,6 +3,7 @@
     "name": "METAR Plugin",
     "documentation": "https://github.com/thijsvdc/ha-metar",
     "requirements": [],
+    "integration_type": "service",
     "codeowners": ["@thijsvdc"],
     "version": "1.0.0",
     "iot_class": "cloud_polling"
