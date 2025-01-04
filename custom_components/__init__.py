@@ -2,6 +2,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import ConfigType
 from .const import DOMAIN
+import logging
+
+LOGGER = logging.getLogger(__name__)
+
+LOGGER.info("METAR Plugin: Starting setup...")
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the METAR Plugin integration."""
