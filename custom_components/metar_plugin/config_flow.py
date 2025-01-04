@@ -1,6 +1,7 @@
-# config_flow.py
 """Config flow for METAR integration."""
 from __future__ import annotations
+
+from typing import Any
 
 import voluptuous as vol
 
@@ -8,7 +9,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import CONF_STATION, DOMAIN, DEFAULT_NAME
+from .const import CONF_STATION, DOMAIN
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -16,21 +17,24 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
-@config_entries.HANDLERS.register(DOMAIN)
 class MetarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for METAR."""
 
     VERSION = 1
 
     async def async_step_user(
-        self, user_input: dict[str, str] | None = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
+            # Check if station ID is already configured
+            await self.async_set_unique_id(user_input[CONF_STATION].upper())
+            self._abort_if_unique_id_configured()
+
             return self.async_create_entry(
-                title=user_input[CONF_STATION],
+                title=user_input[CONF_STATION].upper(),
                 data=user_input,
             )
 
@@ -44,11 +48,11 @@ class MetarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
-    ) -> OptionsFlowHandler:
+    ) -> MetarOptionsFlow:
         """Get the options flow for this handler."""
-        return OptionsFlowHandler(config_entry)
+        return MetarOptionsFlow(config_entry)
 
-class OptionsFlowHandler(config_entries.OptionsFlow):
+class MetarOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for METAR integration."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
@@ -56,7 +60,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_init(
-        self, user_input: dict[str, str] | None = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage options."""
         if user_input is not None:
