@@ -1,7 +1,12 @@
 from homeassistant import config_entries
 import voluptuous as vol
+import logging
 
 from .const import DOMAIN
+
+LOGGER = logging.getLogger(__name__)
+
+LOGGER.info("METAR Plugin: Starting setup...")
 
 class MetarPluginConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for METAR Plugin."""
