@@ -1,13 +1,22 @@
+# config_flow.py
 """Config flow for METAR integration."""
 from __future__ import annotations
 
 import voluptuous as vol
+
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import CONF_STATION, DOMAIN, DEFAULT_NAME
 
+STEP_USER_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_STATION): str,
+    }
+)
+
+@config_entries.HANDLERS.register(DOMAIN)
 class MetarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for METAR."""
 
@@ -27,11 +36,7 @@ class MetarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_STATION): str,
-                }
-            ),
+            data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
         )
 
