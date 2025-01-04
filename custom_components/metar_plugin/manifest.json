@@ -1,5 +1,5 @@
 {
-    "domain": "metar_plugin",
+    "domain": "metar",
     "name": "METAR Plugin",
     "documentation": "https://github.com/thijsvdc/ha-metar",
     "issue_tracker": "https://github.com/thijsvdc/ha-metar/issues",
