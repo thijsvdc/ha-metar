@@ -2,10 +2,10 @@
 from datetime import timedelta
 
 from homeassistant.const import (
-    TEMP_CELSIUS,
-    LENGTH_KILOMETERS,
-    PRESSURE_HPA,
-    SPEED_KILOMETERS_PER_HOUR,
+    UnitOfTemperature,
+    UnitOfLength,
+    UnitOfPressure,
+    UnitOfSpeed,
 )
 
 DOMAIN = "metar"
@@ -38,10 +38,10 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ATTRIBUTION,
-    TEMP_CELSIUS,
-    LENGTH_KILOMETERS,
-    PRESSURE_HPA,
-    SPEED_KILOMETERS_PER_HOUR,
+    UnitOfTemperature,
+    UnitOfLength,
+    UnitOfPressure,
+    UnitOfSpeed,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -70,21 +70,21 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="temperature",
         name="Temperature",
-        native_unit_of_measurement=TEMP_CELSIUS,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="dewpoint",
         name="Dewpoint",
-        native_unit_of_measurement=TEMP_CELSIUS,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="wind_speed",
         name="Wind Speed",
-        native_unit_of_measurement=SPEED_KILOMETERS_PER_HOUR,
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
         device_class=SensorDeviceClass.WIND_SPEED,
         state_class=SensorStateClass.MEASUREMENT,
     ),
@@ -96,14 +96,14 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="visibility",
         name="Visibility",
-        native_unit_of_measurement=LENGTH_KILOMETERS,
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
         icon="mdi:eye",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
         key="pressure",
         name="Pressure",
-        native_unit_of_measurement=PRESSURE_HPA,
+        native_unit_of_measurement=UnitOfPressure.HPA,
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
