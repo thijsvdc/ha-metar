@@ -1,0 +1,1 @@
+DOMAIN = "metar_plugin"
