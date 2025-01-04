@@ -1,85 +1,152 @@
-import requests
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from datetime import timedelta
+"""Support for METAR weather service."""
+from datetime import datetime
 import logging
+from typing import Any
+
+from aiohttp import ClientError
+import voluptuous as vol
+from metar import Metar
+
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorEntityDescription,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_ATTRIBUTION
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import StateType
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+)
+
+from .const import (
+    ATTR_CLOUDS,
+    ATTR_DEWPOINT,
+    ATTR_LAST_UPDATE,
+    ATTR_PRESSURE,
+    ATTR_STATION,
+    ATTR_TEMPERATURE,
+    ATTR_VISIBILITY,
+    ATTR_WEATHER,
+    ATTR_WIND,
+    CONF_STATION,
+    DEFAULT_NAME,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "metar_plugin"
-DEFAULT_UPDATE_INTERVAL = 10  # Minutes
+METAR_BASE_URL = "https://tgftp.nws.noaa.gov/data/observations/metar/stations"
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the METAR plugin based on a config entry."""
-    icao_code = config_entry.data.get("icao_code")
-    update_interval = config_entry.data.get("update_interval", DEFAULT_UPDATE_INTERVAL)
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the METAR sensor."""
+    station = config_entry.data[CONF_STATION]
+    
+    coordinator = MetarDataUpdateCoordinator(
+        hass,
+        station=station,
+    )
 
-    coordinator = MetarDataUpdateCoordinator(hass, icao_code, update_interval)
     await coordinator.async_config_entry_first_refresh()
 
-    async_add_entities([MetarSensor(coordinator)])
+    async_add_entities([MetarSensor(coordinator, station)], True)
 
 class MetarDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching METAR data from the API."""
+    """Class to manage fetching METAR data."""
 
-    def __init__(self, hass, icao_code, update_interval):
-        """Initialize the coordinator."""
-        self.icao_code = icao_code
-        self.api_url = f"https://tgftp.nws.noaa.gov/data/observations/metar/stations/{icao_code.upper()}.TXT"
-        
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        station: str,
+    ) -> None:
+        """Initialize."""
         super().__init__(
             hass,
             _LOGGER,
-            name="METAR Data Coordinator",
-            update_interval=timedelta(minutes=update_interval),
+            name=DOMAIN,
+            update_interval=DEFAULT_UPDATE_INTERVAL,
         )
+        self.station = station
+        self.session = async_get_clientsession(hass)
 
-    async def _async_update_data(self):
-        """Fetch data from the METAR API."""
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch data from METAR."""
         try:
-            response = requests.get(self.api_url, timeout=10)
-            response.raise_for_status()
-            data = response.text
-            return self._parse_metar(data)
-        except requests.RequestException as e:
-            raise UpdateFailed(f"Error fetching METAR data: {e}")
+            url = f"{METAR_BASE_URL}/{self.station}.TXT"
+            async with self.session.get(url) as response:
+                text = await response.text()
+                if response.status != 200:
+                    _LOGGER.error(
+                        "Error retrieving METAR data: %s", response.status
+                    )
+                    return None
 
-    def _parse_metar(self, raw_data):
-        """Parse raw METAR data."""
-        lines = raw_data.strip().splitlines()
-        return lines[-1] if lines else None
+            lines = text.splitlines()
+            if len(lines) < 2:
+                _LOGGER.error("METAR data has wrong format")
+                return None
 
-class MetarSensor(SensorEntity):
-    """Representation of a METAR sensor."""
+            metar_data = lines[1]
+            obs = Metar.Metar(metar_data)
 
-    def __init__(self, coordinator):
-        """Initialize the METAR sensor."""
-        self.coordinator = coordinator
+            data = {
+                ATTR_STATION: obs.station_id,
+                ATTR_LAST_UPDATE: obs.time,
+                ATTR_TEMPERATURE: obs.temp.value("C") if obs.temp else None,
+                ATTR_DEWPOINT: obs.dewpt.value("C") if obs.dewpt else None,
+                ATTR_WIND: f"{obs.wind_speed.value('KMH')} km/h from {obs.wind_dir.compass() if obs.wind_dir else 'Unknown'}" if obs.wind_speed else "Calm",
+                ATTR_VISIBILITY: f"{obs.vis.value('KM')} km" if obs.vis else None,
+                ATTR_PRESSURE: f"{obs.press.value('HPA')} hPa" if obs.press else None,
+                ATTR_WEATHER: str(obs.present_weather()) if obs.present_weather() else None,
+                ATTR_CLOUDS: str(obs.sky_conditions()) if obs.sky_conditions() else None,
+            }
+
+            return data
+
+        except (ClientError, Metar.ParserError) as err:
+            _LOGGER.error("Error retrieving METAR data: %s", err)
+            return None
+
+class MetarSensor(CoordinatorEntity, SensorEntity):
+    """Implementation of a METAR sensor."""
+
+    def __init__(self, coordinator: MetarDataUpdateCoordinator, station: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._station = station
+        self._attr_name = f"{DEFAULT_NAME} {station}"
+        self._attr_unique_id = f"{DOMAIN}_{station}"
 
     @property
-    def name(self):
-        return f"METAR {self.coordinator.icao_code}"
+    def native_value(self) -> StateType:
+        """Return the state of the device."""
+        if self.coordinator.data is None:
+            return None
+        return self.coordinator.data.get(ATTR_WEATHER)
 
     @property
-    def state(self):
-        return self.coordinator.data
-
-    @property
-    def unique_id(self):
-        return f"metar_{self.coordinator.icao_code}"
-
-    @property
-    def available(self):
-        return self.coordinator.last_update_success
-
-    async def async_update(self):
-        """Update the sensor."""
-        await self.coordinator.async_request_refresh()
-
-    @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        if self.coordinator.data is None:
+            return {}
+            
+        data = self.coordinator.data
         return {
-            "icao_code": self.coordinator.icao_code,
+            ATTR_ATTRIBUTION: "Data provided by NOAA",
+            ATTR_STATION: data.get(ATTR_STATION),
+            ATTR_LAST_UPDATE: data.get(ATTR_LAST_UPDATE),
+            ATTR_TEMPERATURE: data.get(ATTR_TEMPERATURE),
+            ATTR_DEWPOINT: data.get(ATTR_DEWPOINT),
+            ATTR_WIND: data.get(ATTR_WIND),
+            ATTR_VISIBILITY: data.get(ATTR_VISIBILITY),
+            ATTR_PRESSURE: data.get(ATTR_PRESSURE),
+            ATTR_CLOUDS: data.get(ATTR_CLOUDS),
         }
-
-# Configuration flow and other setup components would be handled as per HACS requirements.
