@@ -1,0 +1,20 @@
+{
+    "title": "METAR Plugin",
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configure METAR Plugin",
+                "description": "Set up the METAR Plugin integration.",
+                "data": {
+                    "icao": "ICAO Code"
+                }
+            }
+        },
+        "error": {
+            "invalid_icao": "Invalid ICAO code."
+        },
+        "abort": {
+            "already_configured": "This ICAO code is already configured."
+        }
+    }
+}
