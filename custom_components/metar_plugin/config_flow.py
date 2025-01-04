@@ -17,6 +17,6 @@ class MetarPluginConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required("icao", default="KJFK"): str,  # Default ICAO code
+                vol.Required("icao", default="EBBR"): str,  # Default ICAO code
             }),
         )
