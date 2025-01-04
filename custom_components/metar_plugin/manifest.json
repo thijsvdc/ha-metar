@@ -7,4 +7,6 @@
     "codeowners": ["@thijsvdc"],
     "version": "1.0.0",
     "iot_class": "cloud_polling"
+    "logo": "custom_components/metar_plugin/www/logo.png",
+    "icon": "custom_components/metar_plugin/www/icon.png"
 }
