@@ -1,6 +1,9 @@
 # METAR HACS Plugin
 
 A Home Assistant plugin to display METAR data for selected ICAO airport codes.
+During installation of the plugin, the user can select an ICAO code, which will pull the current METAR info from https://tgftp.nws.noaa.gov/data/observations/metar/stations/.
+Raw metar, as well as all separate attributes can be retreived as entities.
+After installation, multiple ICAO airport codes can be added.
 
 ## Installation
 
